@@ -10,10 +10,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torchvision import datasets, transforms
+from tensorboardX import SummaryWriter
 
 # Related parameters
 Learning_rate = 0.01
-Epoch = 3
+Epoch = 1
 Batch_size = 50
 
 
@@ -50,6 +51,8 @@ Model = Net().to(device)
 # optimizer & loss
 optimizer = optim.Adam(Model.parameters(), lr=Learning_rate)
 loss_func = nn.CrossEntropyLoss()
+# tensorboardX, the name of folder is log
+writer = SummaryWriter('log')
 
 
 # Train
@@ -63,7 +66,7 @@ def train(Model, device):
         loss = loss_func(output, target)
         # backward
         loss.backward()
-        # update parameters in Model
+        # update parameter in Model
         optimizer.step()
 
         # print information
@@ -74,6 +77,10 @@ def train(Model, device):
                     loss.item()
                 )
             )
+        # Loss Visualization
+        if batch_idx % 10 == 0:
+            niter = epoch * len(train_loader) + batch_idx
+            writer.add_scalar('Train/Loss', loss.item(), niter)
 
 
 # Test
@@ -82,21 +89,26 @@ def test(Model, device):
     test_loss = 0
     accuracy = 0
     with torch.no_grad():
-        for data, target in test_loader:
+        for batch_idx, (data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device)
             output = Model(data)
             test_loss += loss_func(output, target).item()
             prediction = output.argmax(dim=1, keepdim=True)
             accuracy += prediction.eq(target.view_as(prediction)).sum().item()
+            # Accuracy Visualization
+            if batch_idx % 10 == 0:
+                niter = epoch * len(test_loader) + batch_idx
+                writer.add_scalar('Test/Accuracy', (accuracy / len(test_loader.dataset)), niter)
         test_loss /= len(test_loader.dataset)
         print(
             'Test Average Loss: {:.6f}\tAccuracy: {}/{} {:.0f}%'.format(
                 test_loss, accuracy, len(test_loader.dataset), 100. * accuracy / len(test_loader.dataset)
             )
         )
-    pass
 
 
 for epoch in range(1, Epoch + 1):
     train(Model, device)
     test(Model, device)
+
+# Visualization: tensorboard --logdir ./log
