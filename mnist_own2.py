@@ -63,7 +63,7 @@ def train(Model, device):
         loss = loss_func(output, target)
         # backward
         loss.backward()
-        # update parameter in Model
+        # update parameters in Model
         optimizer.step()
 
         # print information
